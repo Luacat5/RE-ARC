@@ -12,7 +12,6 @@ def decrypt(buf: bytes, table: bytes) -> bytes:
     
     for i in range(len(b) - 1, 1, -1):          # last byte down to index 2
         b[i] ^= table[(ctr & 0x3FF) ^ key]
-        # magic algorithm for each byte
         # Use the counter modulo 1024 to get the position in the table to use.
         # here 0x3FF = 1023 (thus giving 0 to 1023)
         # xor  the position with the "key" assigned from the first byte of the data.
