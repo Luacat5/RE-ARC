@@ -1,0 +1,8 @@
+{
+    "root": {
+        "type": "directory",
+        "config": {
+            "type": "json"
+        }
+    }
+}
