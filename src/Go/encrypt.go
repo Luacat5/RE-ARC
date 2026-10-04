@@ -4,13 +4,6 @@ import "errors"
 
 const table_size = 0x400
 
-func detectErrorSimple(err error) bool {
-	if err != nil {
-		return true
-	}
-	return false
-}
-
 func Decrypt(data []byte, table []byte) ([]byte, error) {
 	if len(table) != table_size {
 		return nil, errors.New("Key table is of wrong size.")

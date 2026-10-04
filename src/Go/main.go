@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 )
 
-var ActiveConfig = OpenConfig("../settings.cfg")
-
 // Ghidra decomp
 var LayoutV145 = Layout{
 	Bounds: 0x8CDCF0, Paths: 0x8B8270, Sizes: 0x8A23E8,
@@ -30,7 +28,7 @@ type Tables struct {
 	Key     []byte
 }
 
-func (m *PEMapper) ErrorHandleMBTL(l Layout) (*Tables, error) {
+func (m *PEMapper) NewTables(l Layout) (*Tables, error) {
 	t := &Tables{}
 	var err error
 
@@ -152,11 +150,15 @@ func packArchive(archivePath, origBin, outBin string, t *Tables, a int) error {
 	return nil
 }
 
-var cfg = OpenConfig("../settings.cfg")
-var steamPath = cfg.Data["steam_path"]
-
 // single bin unpack
 func testMain() {
+	cfg, err := OpenConfig("../settings.cfg")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	steamPath := cfg.Data["steam_path"]
+
 	fmt.Println("Beginning extract repack roundtrip test")
 
 	m, err := NewPEMapper(filepath.Join(steamPath, "MBTL.exe"))
@@ -165,7 +167,7 @@ func testMain() {
 	}
 	defer m.Close()
 
-	t, err := m.ErrorHandleMBTL(LayoutV145)
+	t, err := m.NewTables(LayoutV145)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -185,13 +187,20 @@ func testMain() {
 
 func main() {
 	// testMain()
+	cfg, err := OpenConfig("../settings.cfg")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	steamPath := cfg.Data["steam_path"]
+
 	m, err := NewPEMapper(filepath.Join(steamPath, "MBTL.exe"))
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer m.Close()
 
-	t, err := m.ErrorHandleMBTL(LayoutV145)
+	t, err := m.NewTables(LayoutV145)
 	if err != nil {
 		log.Fatal(err)
 	}

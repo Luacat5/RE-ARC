@@ -2,22 +2,20 @@ package main
 
 import (
 	"bufio"
-	"log"
 	"os"
 	"strings"
 )
 
-
 type ReArcConfig struct {
 	Data map[string]string
-} 
+}
 
 // basic config reader
 
-func OpenConfig(filepath string) ReArcConfig{
+func OpenConfig(filepath string) (*ReArcConfig, error) {
 	file, err := os.Open(filepath)
 	if err != nil {
-		log.Fatalf("failed to open file: %v", err)
+		return nil, err
 	}
 	defer file.Close()
 
@@ -26,7 +24,7 @@ func OpenConfig(filepath string) ReArcConfig{
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		
+
 		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, ";") {
 			continue
 		}
@@ -40,11 +38,11 @@ func OpenConfig(filepath string) ReArcConfig{
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Fatalf("error reading file: %v", err)
+		return nil, err
 	}
 
 	var new_config ReArcConfig
 	new_config.Data = config_data
-	return new_config
-	
+	return &new_config, nil
+
 }
