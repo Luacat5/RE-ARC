@@ -10,8 +10,8 @@ import (
 	"path"
 	"path/filepath"
 
-	"rearc/pemapper"
-	"rearc/tables"
+	"rearc-bintool/pemapper"
+	"rearc-bintool/tables"
 )
 
 var binNum = 7

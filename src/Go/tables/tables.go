@@ -2,8 +2,8 @@ package tables
 
 import (
 	"fmt"
-	"rearc/encryption"
-	"rearc/pemapper"
+	"rearc-bintool/encryption"
+	"rearc-bintool/pemapper"
 )
 
 type Layout struct {

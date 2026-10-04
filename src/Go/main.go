@@ -6,10 +6,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 
-	"rearc/encryption"
-	"rearc/pemapper"
-	"rearc/tables"
+	"rearc-bintool/encryption"
+	"rearc-bintool/pemapper"
+	"rearc-bintool/tables"
 )
 
 // Ghidra decomp
@@ -123,8 +124,51 @@ func unpackArchiveAll() {
 	}
 }
 
+func cmd_unpack_single(argv []string, argc int) {
+	num, err := strconv.Atoi(os.Args[2])
+	if err != nil {
+		log.Fatal(err)
+	}
+	if num >= tables.Bin_Count-1 || num < 0 {
+		log.Fatal("Unable to unpack bin number, number out of index")
+		return
+	}
+	cfg, err := OpenConfig("../settings.cfg")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	steamPath := cfg.Data["steam_path"]
+
+	m, err := pemapper.NewPEMapper(filepath.Join(steamPath, "MBTL.exe"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer m.Close()
+
+	t, err := tables.NewTables(m, LayoutV145)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	unpackArchive(steamPath, "../unpacked", t, num)
+}
+
 func main() {
-	// testMain()
-	// testEquals()
-	unpackArchiveAll()
+	argv := os.Args
+	argc := len(argv)
+
+	if argc == 1 {
+		unpackArchiveAll()
+	} else if argv[1] == "-help" {
+		fmt.Printf("RE-ARC Bin Tool\nflags\n\t[-t#] to run the test number\n\t[-b #] where # is the number of the bin\nFormat:\n\t rearc-bintool <flag> <options>")
+	} else if argv[1] == "-t1" {
+		testMain()
+	} else if argv[1] == "-t2" {
+		testEquals()
+	} else if argc > 2 && argv[1] == "-b" {
+		cmd_unpack_single(argv, argc)
+	} else {
+		log.Fatal("Unable to use exe this way, consider running -help for help")
+	}
 }
