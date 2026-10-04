@@ -1,3 +1,3 @@
-module rearc/bintool
+module rearc
 
 go 1.27.1

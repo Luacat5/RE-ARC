@@ -1,6 +1,10 @@
-package main
+package tables
 
-import "fmt"
+import (
+	"fmt"
+	"rearc/encryption"
+	"rearc/pemapper"
+)
 
 type Layout struct {
 	Bounds, Paths, Sizes, Offsets, Key uint64 // VAs
@@ -14,12 +18,14 @@ type Tables struct {
 	Key     []byte
 }
 
-func (m *PEMapper) NewTables(l Layout) (*Tables, error) {
+const Bin_Count = 21
+
+func NewTables(m *pemapper.PEMapper, l Layout) (*Tables, error) {
 	t := &Tables{}
 	var err error
 
 	// error checks
-	if t.Bounds, err = m.ReadU32s(l.Bounds, bin_count+1); err != nil {
+	if t.Bounds, err = m.ReadU32s(l.Bounds, Bin_Count+1); err != nil {
 		return nil, fmt.Errorf("bonds: %w", err)
 	}
 	if t.Bounds[0] != 0 {
@@ -32,7 +38,7 @@ func (m *PEMapper) NewTables(l Layout) (*Tables, error) {
 		}
 	}
 
-	count := int(t.Bounds[bin_count])
+	count := int(t.Bounds[Bin_Count])
 
 	if t.Sizes, err = m.ReadU32s(l.Sizes, count); err != nil {
 		return nil, fmt.Errorf("sizes: %w", err)
@@ -52,7 +58,7 @@ func (m *PEMapper) NewTables(l Layout) (*Tables, error) {
 		}
 	}
 
-	if t.Key, err = m.ReadBytesAtVA(l.Key, table_size); err != nil {
+	if t.Key, err = m.ReadBytesAtVA(l.Key, encryption.Table_Size); err != nil {
 		return nil, fmt.Errorf("key: %w", err)
 	}
 	return t, nil

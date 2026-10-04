@@ -6,18 +6,20 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
+	"rearc/encryption"
+	"rearc/pemapper"
+	"rearc/tables"
 )
 
 // Ghidra decomp
-var LayoutV145 = Layout{
+var LayoutV145 = tables.Layout{
 	Bounds: 0x8CDCF0, Paths: 0x8B8270, Sizes: 0x8A23E8,
 	Offsets: 0x8CDDB8, Key: 0x8B7E70,
 }
 
-const bin_count = 21
-
 // what we've all been waiting for
-func unpackArchive(steamPath, outDir string, t *Tables, a int) error {
+func unpackArchive(steamPath, outDir string, t *tables.Tables, a int) error {
 	f, err := os.Open(filepath.Join(steamPath, fmt.Sprintf("data%03d.bin", a)))
 	if err != nil {
 		return err
@@ -29,7 +31,7 @@ func unpackArchive(steamPath, outDir string, t *Tables, a int) error {
 		if _, err := f.ReadAt(buf, int64(t.Offsets[s])); err != nil {
 			return fmt.Errorf("slot %d (%s): %w", s, t.Paths[s], err)
 		}
-		plain, err := Decrypt(buf, t.Key)
+		plain, err := encryption.Decrypt(buf, t.Key)
 		if err != nil {
 			return err
 		}
@@ -63,7 +65,7 @@ func copyFile(src, dst string) error {
 	return out.Close()
 }
 
-func packArchive(archivePath, origBin, outBin string, t *Tables, a int) error {
+func packArchive(archivePath, origBin, outBin string, t *tables.Tables, a int) error {
 	if err := copyFile(origBin, outBin); err != nil {
 		return err
 	}
@@ -82,7 +84,7 @@ func packArchive(archivePath, origBin, outBin string, t *Tables, a int) error {
 		if uint32(len(plain)) != t.Sizes[s] {
 			return fmt.Errorf("slot %d (%s): size mismatch %d with expected %d", s, t.Paths[s], len(plain), t.Sizes[s])
 		}
-		enc, err := Encrypt(plain, t.Key)
+		enc, err := encryption.Encrypt(plain, t.Key)
 		if err != nil {
 			return err
 		}
@@ -103,18 +105,18 @@ func unpackArchiveAll() {
 
 	steamPath := cfg.Data["steam_path"]
 
-	m, err := NewPEMapper(filepath.Join(steamPath, "MBTL.exe"))
+	m, err := pemapper.NewPEMapper(filepath.Join(steamPath, "MBTL.exe"))
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer m.Close()
 
-	t, err := m.NewTables(LayoutV145)
+	t, err := tables.NewTables(m, LayoutV145)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for i := 0; i < bin_count; i++ {
+	for i := 0; i < tables.Bin_Count; i++ {
 		if err := unpackArchive(steamPath, "../unpacked", t, i); err != nil {
 			log.Fatal(err)
 		}

@@ -9,6 +9,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+
+	"rearc/pemapper"
+	"rearc/tables"
 )
 
 var binNum = 7
@@ -23,13 +26,13 @@ func testMain() {
 
 	fmt.Println("Beginning extract repack roundtrip test")
 
-	m, err := NewPEMapper(filepath.Join(steamPath, "MBTL.exe"))
+	m, err := pemapper.NewPEMapper(filepath.Join(steamPath, "MBTL.exe"))
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer m.Close()
 
-	t, err := m.NewTables(LayoutV145)
+	t, err := tables.NewTables(m, LayoutV145)
 	if err != nil {
 		log.Fatal(err)
 	}

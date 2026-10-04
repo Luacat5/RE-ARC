@@ -1,11 +1,11 @@
-package main
+package encryption
 
 import "errors"
 
-const table_size = 0x400
+const Table_Size = 0x400
 
 func Decrypt(data []byte, table []byte) ([]byte, error) {
-	if len(table) != table_size {
+	if len(table) != Table_Size {
 		return nil, errors.New("Key table is of wrong size.")
 	}
 
@@ -31,7 +31,7 @@ func Decrypt(data []byte, table []byte) ([]byte, error) {
 }
 
 func Encrypt(data []byte, table []byte) ([]byte, error) {
-	if len(table) != table_size {
+	if len(table) != Table_Size {
 		return nil, errors.New("Key table is of wrong size.")
 	}
 
