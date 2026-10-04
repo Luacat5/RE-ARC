@@ -11,7 +11,7 @@ def test1():
 
 def test2():
     # unpack roundtrip test
-    binNum = 0 # one of  the smaller bins
+    binNum = 7 # one of  the smaller bins
 
     unpack_single_bin(binNum)
     success = VERIFY_UNPACK(binNum)
