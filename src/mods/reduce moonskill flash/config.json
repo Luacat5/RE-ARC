@@ -1,8 +1,0 @@
-{
-    "name": "Reduce Moonskill Flashing",
-    "author": "Bee",
-    "version": "0.0.1",
-    "target_bins": [
-        "script"
-    ]
-}
