@@ -1,4 +1,4 @@
-package pemapper
+package tables
 
 import (
 	"bytes"

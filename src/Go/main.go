@@ -1,15 +1,14 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"rearc-bintool/encryption"
-	"rearc-bintool/pemapper"
 	"rearc-bintool/tables"
 )
 
@@ -106,13 +105,7 @@ func unpackArchiveAll() {
 
 	steamPath := cfg.Data["steam_path"]
 
-	m, err := pemapper.NewPEMapper(filepath.Join(steamPath, "MBTL.exe"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer m.Close()
-
-	t, err := tables.NewTables(m, LayoutV145)
+	t, err := tables.NewTables(filepath.Join(steamPath, "MBTL.exe"), LayoutV145)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -124,11 +117,7 @@ func unpackArchiveAll() {
 	}
 }
 
-func cmd_unpack_single(argv []string, argc int) {
-	num, err := strconv.Atoi(os.Args[2])
-	if err != nil {
-		log.Fatal(err)
-	}
+func cmd_unpack_single(num int) {
 	if num >= tables.Bin_Count-1 || num < 0 {
 		log.Fatal("Unable to unpack bin number, number out of index")
 		return
@@ -140,13 +129,7 @@ func cmd_unpack_single(argv []string, argc int) {
 	}
 	steamPath := cfg.Data["steam_path"]
 
-	m, err := pemapper.NewPEMapper(filepath.Join(steamPath, "MBTL.exe"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer m.Close()
-
-	t, err := tables.NewTables(m, LayoutV145)
+	t, err := tables.NewTables(filepath.Join(steamPath, "MBTL.exe"), LayoutV145)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -155,20 +138,30 @@ func cmd_unpack_single(argv []string, argc int) {
 }
 
 func main() {
-	argv := os.Args
-	argc := len(argv)
+	var test int
+	var bin int
+	var operation string
+	var unpackAll bool
 
-	if argc == 1 {
+	flag.IntVar(&test, "test", -1, "chooses a test to be ran")
+	flag.IntVar(&bin, "bin", 0, "chooses a bin to perform the operation")
+	flag.StringVar(&operation, "op", "unpack", "What you would like to do to the bin")
+	flag.BoolVar(&unpackAll, "UA", false, "unpacks all bins in the game directory, default is false")
+
+	flag.Parse()
+
+	if unpackAll {
 		unpackArchiveAll()
-	} else if argv[1] == "-help" {
-		fmt.Printf("RE-ARC Bin Tool\nflags\n\t[-t#] to run the test number\n\t[-b #] where # is the number of the bin\nFormat:\n\t rearc-bintool <flag> <options>")
-	} else if argv[1] == "-t1" {
-		testMain()
-	} else if argv[1] == "-t2" {
-		testEquals()
-	} else if argc > 2 && argv[1] == "-b" {
-		cmd_unpack_single(argv, argc)
-	} else {
-		log.Fatal("Unable to use exe this way, consider running -help for help")
+	} else if test != -1 {
+		switch test {
+		case 1:
+			testMain()
+		case 2:
+			testEquals()
+		}
+	} else if operation == "unpack" {
+		cmd_unpack_single(bin)
+	} else if operation == "pack" {
+		fmt.Println("Sorry this operation is not yet supported.")
 	}
 }

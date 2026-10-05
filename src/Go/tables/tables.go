@@ -3,7 +3,6 @@ package tables
 import (
 	"fmt"
 	"rearc-bintool/encryption"
-	"rearc-bintool/pemapper"
 )
 
 type Layout struct {
@@ -20,9 +19,13 @@ type Tables struct {
 
 const Bin_Count = 21
 
-func NewTables(m *pemapper.PEMapper, l Layout) (*Tables, error) {
+func NewTables(path string, l Layout) (*Tables, error) {
 	t := &Tables{}
-	var err error
+	m, err := NewPEMapper(path)
+	if err != nil {
+		return nil, err
+	}
+	defer m.Close()
 
 	// error checks
 	if t.Bounds, err = m.ReadU32s(l.Bounds, Bin_Count+1); err != nil {
