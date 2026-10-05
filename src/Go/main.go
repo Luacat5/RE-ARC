@@ -3,22 +3,27 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"rearc-bintool/encryption"
 	"rearc-bintool/tables"
 )
 
-// Ghidra decomp
-var LayoutV145 = tables.Layout{
-	Bounds: 0x8CDCF0, Paths: 0x8B8270, Sizes: 0x8A23E8,
-	Offsets: 0x8CDDB8, Key: 0x8B7E70,
+type SessionInformation struct {
+	stagingDir *string
+	outDir     *string
+
+	originalBin *string
+	exportBin   *string
+
+	cfg *ReArcConfig
+
+	binNumber int
 }
 
-// what we've all been waiting for
 func unpackArchive(steamPath, outDir string, t *tables.Tables, a int) error {
 	f, err := os.Open(filepath.Join(steamPath, fmt.Sprintf("data%03d.bin", a)))
 	if err != nil {
@@ -46,30 +51,8 @@ func unpackArchive(steamPath, outDir string, t *tables.Tables, a int) error {
 	return nil
 }
 
-// non mandatory
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	if _, err := io.Copy(out, in); err != nil {
-		out.Close()
-		return err
-	}
-	return out.Close()
-}
-
 func packArchive(archivePath, origBin, outBin string, t *tables.Tables, a int) error {
-	if err := copyFile(origBin, outBin); err != nil {
-		return err
-	}
-	f, err := os.OpenFile(outBin, os.O_WRONLY, 0)
+	f, err := os.OpenFile(outBin, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
@@ -97,71 +80,115 @@ func packArchive(archivePath, origBin, outBin string, t *tables.Tables, a int) e
 	return nil
 }
 
-func unpackArchiveAll() {
-	cfg, err := OpenConfig("../settings.cfg")
-	if err != nil {
-		log.Fatal(err)
+// boilerplate
+func GetTables(cfg *ReArcConfig) (*tables.Tables, *string, *int, error) {
+	if cfg == nil {
+		return nil, nil, nil, fmt.Errorf("Error: Missing config file")
 	}
-
 	steamPath := cfg.Data["steam_path"]
+	searchString := cfg.Data["search_string"]
+	binCount, _ := strconv.Atoi(cfg.Data["binfile_count"])
 
-	t, err := tables.NewTables(filepath.Join(steamPath, "MBTL.exe"), LayoutV145)
+	l, err := tables.LayoutForMBTL(steamPath, searchString, binCount)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	t, err := tables.NewTables(filepath.Join(steamPath, "MBTL.exe"), *l, binCount)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return t, &steamPath, &binCount, nil
+}
+
+func unpackArchiveAll(cfg *ReArcConfig) {
+	t, steamPath, binCount, err := GetTables(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for i := 0; i < tables.Bin_Count; i++ {
-		if err := unpackArchive(steamPath, "../unpacked", t, i); err != nil {
+	for i := 0; i < *binCount; i++ {
+		if err := unpackArchive(*steamPath, "../unpacked", t, i); err != nil {
 			log.Fatal(err)
 		}
 	}
 }
 
-func cmd_unpack_single(num int) {
-	if num >= tables.Bin_Count-1 || num < 0 {
-		log.Fatal("Unable to unpack bin number, number out of index")
-		return
+func cmd_unpack_single(cfg *ReArcConfig, session SessionInformation) {
+	t, steamPath, _, err := GetTables(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := unpackArchive(*steamPath, "../unpacked", t, session.binNumber); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func cmd_pack_single(cfg *ReArcConfig, session SessionInformation) {
+	if *session.stagingDir == "" {
+		log.Fatal("No staging folder specified, try using -fp flag")
 	}
 	cfg, err := OpenConfig("../settings.cfg")
 	if err != nil {
 		log.Fatal(err)
-		return
 	}
-	steamPath := cfg.Data["steam_path"]
 
-	t, err := tables.NewTables(filepath.Join(steamPath, "MBTL.exe"), LayoutV145)
+	t, _, _, err := GetTables(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	unpackArchive(steamPath, "../unpacked", t, num)
+	if err := packArchive(*session.stagingDir, *session.originalBin, *session.exportBin, t, session.binNumber); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {
-	var test int
 	var bin int
 	var operation string
 	var unpackAll bool
+	var stagingFolderPath string
 
-	flag.IntVar(&test, "test", -1, "chooses a test to be ran")
-	flag.IntVar(&bin, "bin", 0, "chooses a bin to perform the operation")
-	flag.StringVar(&operation, "op", "unpack", "What you would like to do to the bin")
-	flag.BoolVar(&unpackAll, "UA", false, "unpacks all bins in the game directory, default is false")
+	outFolderPath := "../output" // fixed for now, flag unneccessary.
+
+	flag.IntVar(&bin, "bin", 0, "chooses a bin by number to perform the operation")
+	flag.StringVar(&operation, "op", "unpack", "Specify operation to perform on the bin")
+	flag.StringVar(&stagingFolderPath, "fp", "", "Specify staging folder")
+	flag.BoolVar(&unpackAll, "all", false, "unpacks all bins in the game directory, overrides all other commands.")
 
 	flag.Parse()
 
+	cfg, err := OpenConfig("../settings.cfg")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	origBin := filepath.Join(cfg.Data["steamPath"], fmt.Sprintf("data%03d.bin", bin))
+	binName := filepath.Base(origBin)
+	outBin := filepath.Join("../output/", binName)
+
+	entry := SessionInformation{
+		binNumber: bin,
+
+		stagingDir: &stagingFolderPath,
+		outDir:     &outFolderPath,
+
+		originalBin: &origBin,
+		exportBin:   &outBin,
+	}
+
 	if unpackAll {
-		unpackArchiveAll()
-	} else if test != -1 {
-		switch test {
-		case 1:
-			testMain()
-		case 2:
-			testEquals()
+		switch operation {
+		case "pack":
+			fmt.Println("Sorry this action is not yet available.")
+		case "unpack":
+			unpackArchiveAll(cfg)
 		}
 	} else if operation == "unpack" {
-		cmd_unpack_single(bin)
+		cmd_unpack_single(cfg, entry)
 	} else if operation == "pack" {
-		fmt.Println("Sorry this operation is not yet supported.")
+		cmd_pack_single(cfg, entry)
 	}
 }

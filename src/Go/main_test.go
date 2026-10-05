@@ -10,36 +10,34 @@ import (
 	"path"
 	"path/filepath"
 
-	"rearc-bintool/tables"
+	"testing"
 )
 
-var binNum = 7
+var binNum = 14
 
-func testMain() {
+func TestRoundTrip(test *testing.T) {
 	cfg, err := OpenConfig("../settings.cfg")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	steamPath := cfg.Data["steam_path"]
-
 	fmt.Println("Beginning extract repack roundtrip test")
 
-	t, err := tables.NewTables(filepath.Join(steamPath, "MBTL.exe"), LayoutV145)
+	t, steamPath, _, err := GetTables(cfg)
 
 	if err != nil {
-		log.Fatal(err)
+		test.Error(err)
 	}
 
 	binName := fmt.Sprintf("data%03d.bin", binNum)
 	outDir := fmt.Sprintf("../output/%s", binName)
 
-	if err := unpackArchive(steamPath, "../unpacked", t, binNum); err != nil {
-		log.Fatal(err)
+	if err := unpackArchive(*steamPath, "../unpacked", t, binNum); err != nil {
+		test.Error(err)
 	}
 
-	if err := packArchive("../unpacked", filepath.Join(steamPath, binName), outDir, t, binNum); err != nil {
-		log.Fatal(err)
+	if err := packArchive("../unpacked", filepath.Join(*steamPath, binName), outDir, t, binNum); err != nil {
+		test.Error(err)
 	}
 }
 
@@ -67,16 +65,15 @@ func hashFile(path string) (string, error) {
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
-
-func testEquals() {
+func TestEquals(test *testing.T) {
 	cfg, err := OpenConfig("../settings.cfg")
 	if err != nil {
-		log.Fatal(err)
+		test.Error(err)
 	}
 	binName := fmt.Sprintf("data%03d.bin", binNum)
 	result, err := sameFile(path.Join(cfg.Data["steam_path"], binName), path.Join("../output", binName))
 	if err != nil {
-		log.Fatal(err)
+		test.Error(err)
 	}
 	fmt.Printf("File match: %t\n", result)
 }

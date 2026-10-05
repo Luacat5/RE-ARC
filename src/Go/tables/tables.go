@@ -17,9 +17,7 @@ type Tables struct {
 	Key     []byte
 }
 
-const Bin_Count = 21
-
-func NewTables(path string, l Layout) (*Tables, error) {
+func NewTables(path string, l Layout, binCount int) (*Tables, error) {
 	t := &Tables{}
 	var err error
 
@@ -30,7 +28,7 @@ func NewTables(path string, l Layout) (*Tables, error) {
 	defer m.Close()
 
 	// error checks
-	if t.Bounds, err = m.ReadU32s(l.Bounds, Bin_Count+1); err != nil {
+	if t.Bounds, err = m.ReadU32s(l.Bounds, binCount+1); err != nil {
 		return nil, fmt.Errorf("bonds: %w", err)
 	}
 	if t.Bounds[0] != 0 {
@@ -43,7 +41,7 @@ func NewTables(path string, l Layout) (*Tables, error) {
 		}
 	}
 
-	count := int(t.Bounds[Bin_Count])
+	count := int(t.Bounds[binCount])
 
 	if t.Sizes, err = m.ReadU32s(l.Sizes, count); err != nil {
 		return nil, fmt.Errorf("sizes: %w", err)
