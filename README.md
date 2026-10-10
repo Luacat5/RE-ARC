@@ -24,3 +24,9 @@ The RE-ARC Bin tool is a standalone-exe in the project's go folder which is capa
 
 ### Automatic Memory Search
 The RE-ARC Bin tool will search the data of the MBTL.exe file and use that game's data to extract the content from the game's files. As of the versions tested, RE-ARC Bin tool is capable of extracting accross version with this information.
+
+## Roadmap
+moving forward I have these key features in mind for the future of this project:
+ - Add support to add paths to the game
+ - Add a working barebones UI for ease of use
+ - Update logo
